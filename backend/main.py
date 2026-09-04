@@ -16,7 +16,7 @@ import numpy as np
 from fastapi import FastAPI, UploadFile, File, HTTPException, Form
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, HTMLResponse
 from pydantic import BaseModel
 
 from backend.database.db import get_conn, init_db, dict_from_row
@@ -556,6 +556,47 @@ def download_report(filename: str):
     return FileResponse(path, media_type="application/pdf", filename=filename)
 
 
+# -------------------------------------------------------------------------
+# Frontend
+# -------------------------------------------------------------------------
+FRONTEND_DIR = os.path.join(BASE_DIR, "frontend", "dist")
+
+if os.path.exists(FRONTEND_DIR):
+    app.mount(
+        "/assets",
+        StaticFiles(directory=os.path.join(FRONTEND_DIR, "assets")),
+        name="assets"
+    )
+
+
 @app.get("/")
 def root():
-    return {"service": "SONARSHIELD API", "status": "ok", "mode": MODEL_MODE}
+    index_path = os.path.join(FRONTEND_DIR, "index.html")
+
+    if os.path.exists(index_path):
+        return FileResponse(index_path)
+
+    return {
+        "service": "SONARSHIELD API",
+        "status": "ok",
+        "mode": MODEL_MODE
+    }
+
+
+@app.get("/{full_path:path}")
+def serve_frontend(full_path: str):
+    # Never intercept API routes
+    if full_path.startswith("api/"):
+        raise HTTPException(404, "API endpoint not found")
+
+    requested_file = os.path.join(FRONTEND_DIR, full_path)
+
+    if os.path.isfile(requested_file):
+        return FileResponse(requested_file)
+
+    index_path = os.path.join(FRONTEND_DIR, "index.html")
+
+    if os.path.exists(index_path):
+        return FileResponse(index_path)
+
+    raise HTTPException(404, "Frontend not found")
