@@ -25,7 +25,7 @@ RUN pip install --no-cache-dir -r backend/requirements.txt
 
 COPY backend backend
 COPY data data
-COPY reports reports
+RUN mkdir -p reports
 
 # Copy React production build
 COPY --from=frontend-build /frontend/dist frontend/dist
